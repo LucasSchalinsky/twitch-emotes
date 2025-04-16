@@ -45,9 +45,9 @@ def main():
                 with zipfile.ZipFile(zip_buffer, 'w') as zip_file:
                     for idx, status in st.session_state.grid_status.items():
                         if status != "None":
-                            row, col = divmod(idx-1, grid_cols)
-                            x = margin + col * (square_size + gap)
-                            y = margin + row * (square_size + gap)
+                            row_idx, col_idx = divmod(idx-1, grid_cols)
+                            x = margin + col_idx * (square_size + gap)
+                            y = margin + row_idx * (square_size + gap)
 
                             if idx in st.session_state.grid_names and st.session_state.grid_names[idx]:
                                 name = st.session_state.grid_names[idx]
@@ -118,6 +118,31 @@ def main():
 
             for i, tab in enumerate(tabs):
                 with tab:
+                    row_buttons = st.columns(3)
+                    with row_buttons[0]:
+                        if st.button(f"Todos Emotes na Row {i+1}", key=f"all_emotes_{i}"):
+                            for j in range(grid_cols):
+                                cell_num = i * grid_cols + j + 1
+                                st.session_state[f"status_{cell_num}"] = "Emote"
+                                st.session_state.grid_status[cell_num] = "Emote"
+                            st.rerun() 
+
+                    with row_buttons[1]:
+                        if st.button(f"Todos Badges na Row {i+1}", key=f"all_badges_{i}"):
+                            for j in range(grid_cols):
+                                cell_num = i * grid_cols + j + 1
+                                st.session_state[f"status_{cell_num}"] = "Badge"
+                                st.session_state.grid_status[cell_num] = "Badge"
+                            st.rerun()
+
+                    with row_buttons[2]:
+                        if st.button(f"Limpar Row {i+1}", key=f"clear_row_{i}"):
+                            for j in range(grid_cols):
+                                cell_num = i * grid_cols + j + 1
+                                st.session_state[f"status_{cell_num}"] = "None"
+                                st.session_state.grid_status[cell_num] = "None"
+                            st.rerun()
+
                     cols = st.columns(grid_cols)
                     for j in range(grid_cols):
                         cell_num = i * grid_cols + j + 1
@@ -164,9 +189,9 @@ def main():
             with chat_container:
                 for idx, status in st.session_state.grid_status.items():
                     if status != "None":
-                        row, col = divmod(idx-1, grid_cols)
-                        x = margin + col * (square_size + gap)
-                        y = margin + row * (square_size + gap)
+                        row_idx, col_idx = divmod(idx-1, grid_cols)
+                        x = margin + col_idx * (square_size + gap)
+                        y = margin + row_idx * (square_size + gap)
 
                         if idx in st.session_state.grid_names and st.session_state.grid_names[idx]:
                             name = st.session_state.grid_names[idx]
@@ -201,9 +226,9 @@ def main():
                 for idx, status in st.session_state.grid_status.items():
                     if status == "Emote":
                         has_emotes = True
-                        row, col = divmod(idx-1, grid_cols)
-                        x = margin + col * (square_size + gap)
-                        y = margin + row * (square_size + gap)
+                        row_idx, col_idx = divmod(idx-1, grid_cols)
+                        x = margin + col_idx * (square_size + gap)
+                        y = margin + row_idx * (square_size + gap)
 
                         if idx in st.session_state.grid_names and st.session_state.grid_names[idx]:
                             name = st.session_state.grid_names[idx]
@@ -235,9 +260,9 @@ def main():
                 for idx, status in st.session_state.grid_status.items():
                     if status == "Badge":
                         has_badges = True
-                        row, col = divmod(idx-1, grid_cols)
-                        x = margin + col * (square_size + gap)
-                        y = margin + row * (square_size + gap)
+                        row_idx, col_idx = divmod(idx-1, grid_cols)
+                        x = margin + col_idx * (square_size + gap)
+                        y = margin + row_idx * (square_size + gap)
 
                         if idx in st.session_state.grid_names and st.session_state.grid_names[idx]:
                             name = st.session_state.grid_names[idx]
@@ -287,9 +312,9 @@ def main():
                     else:
                         name = str(idx)
                     
-                    row, col = divmod(idx-1, grid_cols)
-                    x = margin + col * (square_size + gap)
-                    y = margin + row * (square_size + gap)
+                    row_idx, col_idx = divmod(idx-1, grid_cols)
+                    x = margin + col_idx * (square_size + gap)
+                    y = margin + row_idx * (square_size + gap)
                     
                     cell = image.crop((x, y, x + square_size, y + square_size))
                     
