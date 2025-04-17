@@ -42,7 +42,7 @@ def main():
 
     
         zip_name = st.text_input("Nome do Zip /ᐠ˵- ⩊ -˵マ", value="")
-        f"Caso não preencha, o nome vai ser: {default_name}.zip（￣︶￣）↗"
+        f"O nome do Zip vai ser: {default_name if not zip_name else zip_name}.zip（￣︶￣）↗"
 
 
         st.subheader("Download")
@@ -65,42 +65,77 @@ def main():
 
                             cell = image.crop((x, y, x + square_size, y + square_size))
 
-                            if idx in st.session_state.grid_flip and st.session_state.grid_flip[idx]:
-                                cell = ImageOps.mirror(cell)
-
                             folder = f"{name}/"
 
                             orig_buffer = io.BytesIO()
                             cell.save(orig_buffer, format="PNG")
                             orig_buffer.seek(0)
-                            zip_file.writestr(f"{folder}{name}_original.png", orig_buffer.getvalue())
+                            zip_file.writestr(f"{folder}{name}_Original.png", orig_buffer.getvalue())
+
+                            is_flipped = idx in st.session_state.grid_flip and st.session_state.grid_flip[idx]
 
                             if status == "Emote":
                                 sizes = [(128, 128), (112, 112), (56, 56), (28, 28)]
                                 for size in sizes:
-                                    resized = cell.resize(size)
-                                    img_buffer = io.BytesIO()
-                                    resized.save(img_buffer, format="PNG")
-                                    img_buffer.seek(0)
+                                    normal_cell = cell
+                                    normal_resized = normal_cell.resize(size)
+                                    normal_buffer = io.BytesIO()
+                                    normal_resized.save(normal_buffer, format="PNG")
+                                    normal_buffer.seek(0)
+
+                                    normal_suffix = "A_" if is_flipped else "_"
+
                                     if size[0] == 128:
-                                        zip_file.writestr(f"{folder}{name}_{size[0]}x{size[1]}_Discord.png",
-                                                        img_buffer.getvalue())
+                                        zip_file.writestr(f"{folder}{name}{normal_suffix}DiscordSize.png",
+                                                        normal_buffer.getvalue())
                                     else:
-                                        zip_file.writestr(f"{folder}{name}_{size[0]}x{size[1]}.png",
-                                                        img_buffer.getvalue())
+                                        zip_file.writestr(f"{folder}{name}{normal_suffix}{size[0]}x{size[1]}.png",
+                                                        normal_buffer.getvalue())
+
+                                    if is_flipped:
+                                        flipped_cell = ImageOps.mirror(cell)
+                                        flipped_resized = flipped_cell.resize(size)
+                                        flipped_buffer = io.BytesIO()
+                                        flipped_resized.save(flipped_buffer, format="PNG")
+                                        flipped_buffer.seek(0)
+
+                                        if size[0] == 128:
+                                            zip_file.writestr(f"{folder}{name}B_DiscordSize.png",
+                                                            flipped_buffer.getvalue())
+                                        else:
+                                            zip_file.writestr(f"{folder}{name}B_{size[0]}x{size[1]}.png",
+                                                            flipped_buffer.getvalue())
                             else:
                                 sizes = [(128, 128), (72, 72), (36, 36), (18, 18)]
                                 for size in sizes:
-                                    resized = cell.resize(size)
-                                    img_buffer = io.BytesIO()
-                                    resized.save(img_buffer, format="PNG")
-                                    img_buffer.seek(0)
+                                    normal_cell = cell
+                                    normal_resized = normal_cell.resize(size)
+                                    normal_buffer = io.BytesIO()
+                                    normal_resized.save(normal_buffer, format="PNG")
+                                    normal_buffer.seek(0)
+
+                                    normal_suffix = "A_" if is_flipped else "_"
+
                                     if size[0] == 128:
-                                        zip_file.writestr(f"{folder}{name}_{size[0]}x{size[1]}_Discord.png",
-                                                        img_buffer.getvalue())
+                                        zip_file.writestr(f"{folder}{name}{normal_suffix}DiscordSize.png",
+                                                        normal_buffer.getvalue())
                                     else:
-                                        zip_file.writestr(f"{folder}{name}_{size[0]}x{size[1]}.png",
-                                                        img_buffer.getvalue())
+                                        zip_file.writestr(f"{folder}{name}{normal_suffix}{size[0]}x{size[1]}.png",
+                                                        normal_buffer.getvalue())
+
+                                    if is_flipped:
+                                        flipped_cell = ImageOps.mirror(cell)
+                                        flipped_resized = flipped_cell.resize(size)
+                                        flipped_buffer = io.BytesIO()
+                                        flipped_resized.save(flipped_buffer, format="PNG")
+                                        flipped_buffer.seek(0)
+
+                                        if size[0] == 128:
+                                            zip_file.writestr(f"{folder}{name}B_DiscordSize.png",
+                                                            flipped_buffer.getvalue())
+                                        else:
+                                            zip_file.writestr(f"{folder}{name}B_{size[0]}x{size[1]}.png",
+                                                            flipped_buffer.getvalue())
 
                 zip_buffer.seek(0)
                 st.session_state.zip_data = zip_buffer.getvalue()
