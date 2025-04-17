@@ -67,12 +67,21 @@ def main():
 
                             folder = f"{name}/"
 
+                            is_flipped = idx in st.session_state.grid_flip and st.session_state.grid_flip[idx]
+
+                            original_suffix = "A_" if is_flipped else "_"
+
                             orig_buffer = io.BytesIO()
                             cell.save(orig_buffer, format="PNG")
                             orig_buffer.seek(0)
-                            zip_file.writestr(f"{folder}{name}_Original.png", orig_buffer.getvalue())
+                            zip_file.writestr(f"{folder}{name}{original_suffix}Original.png", orig_buffer.getvalue())
 
-                            is_flipped = idx in st.session_state.grid_flip and st.session_state.grid_flip[idx]
+                            if is_flipped:
+                                flipped_original_cell = ImageOps.mirror(cell)
+                                orig_flipped_buffer = io.BytesIO()
+                                flipped_original_cell.save(orig_flipped_buffer, format="PNG")
+                                orig_flipped_buffer.seek(0)
+                                zip_file.writestr(f"{folder}{name}B_Original.png", orig_flipped_buffer.getvalue())
 
                             if status == "Emote":
                                 sizes = [(128, 128), (112, 112), (56, 56), (28, 28)]
