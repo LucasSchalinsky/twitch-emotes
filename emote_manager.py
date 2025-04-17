@@ -36,6 +36,15 @@ def main():
         gap = 150
         square_size = 500
 
+        default_name = uploaded_file.name
+        default_name = os.path.splitext(default_name)[0]
+        default_name = default_name.replace("Grid", "").strip()
+
+    
+        zip_name = st.text_input("Nome do Zip /ᐠ˵- ⩊ -˵マ", value="")
+        f"Caso não preencha, o nome vai ser: {default_name}.zip（￣︶￣）↗"
+
+
         st.subheader("Download")
         col_buttons = st.columns(2)
 
@@ -99,10 +108,15 @@ def main():
 
         with col_buttons[1]:
             if st.session_state.processed:
+                if zip_name:
+                    download_filename = f"{zip_name}.zip"
+                else:
+                    download_filename = f"{default_name}.zip" if default_name else "emotes_and_badges.zip"
+
                 st.download_button(
                     label="Baixar as Imagenzinhas",
                     data=st.session_state.zip_data,
-                    file_name="emotes_and_badges.zip",
+                    file_name=download_filename,
                     mime="application/zip"
                 )
 
