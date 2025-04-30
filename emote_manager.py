@@ -6,6 +6,17 @@ import zipfile
 import base64
 import numpy as np
 
+def is_empty_cell(image_cell, threshold=0.99):
+    cell_array = np.array(image_cell)
+
+    if cell_array.shape[2] < 4:
+        return False
+
+    transparent_pixels = np.sum(cell_array[:, :, 3] == 0)
+    total_pixels = cell_array.shape[0] * cell_array.shape[1]
+
+    return transparent_pixels / total_pixels > threshold
+
 def main():
     st.set_page_config(
         page_title="Um fragmento de deus",
@@ -14,7 +25,7 @@ def main():
     )
 
     st.title("Um fragmento de deus")
-    
+
     if 'grid_status' not in st.session_state:
         st.session_state.grid_status = {}
     if 'grid_names' not in st.session_state:
@@ -23,6 +34,8 @@ def main():
         st.session_state.grid_flip = {}
     if 'processed' not in st.session_state:
         st.session_state.processed = False
+    if 'non_empty_cells' not in st.session_state:
+        st.session_state.non_empty_cells = {}
 
     uploaded_file = st.file_uploader("Imagenzinha da grid mo (❁´◡`❁)", type=["png", "jpg", "jpeg"])
 
@@ -40,10 +53,31 @@ def main():
         default_name = os.path.splitext(default_name)[0]
         default_name = default_name.replace("Grid", "").strip()
 
-    
+        if 'cells_detected' not in st.session_state or not st.session_state.cells_detected:
+            st.session_state.non_empty_cells = {}
+            st.session_state.non_empty_rows = set()
+
+            for i in range(grid_rows):
+                row_has_content = False
+                for j in range(grid_cols):
+                    cell_num = i * grid_cols + j + 1
+
+                    x = margin + j * (square_size + gap)
+                    y = margin + i * (square_size + gap)
+
+                    cell = image.crop((x, y, x + square_size, y + square_size))
+
+                    if not is_empty_cell(cell):
+                        st.session_state.non_empty_cells[cell_num] = (i, j)
+                        row_has_content = True
+
+                if row_has_content:
+                    st.session_state.non_empty_rows.add(i)
+
+            st.session_state.cells_detected = True
+
         zip_name = st.text_input("Nome do Zip /ᐠ˵- ⩊ -˵マ", value="")
         f"O nome do Zip vai ser: {default_name if not zip_name else zip_name}.zip（￣︶￣）↗"
-
 
         st.subheader("Download")
         col_buttons = st.columns(2)
@@ -172,72 +206,83 @@ def main():
 
             st.subheader("Seleção dos Emotes e Badges (〃￣︶￣)人(￣︶￣〃)")
 
-            tabs = st.tabs([f"Row {i+1}" for i in range(grid_rows)])
+            # Criar tabs apenas para as linhas não vazias
+            non_empty_rows_list = sorted(list(st.session_state.non_empty_rows))
+            tabs = st.tabs([f"Row {i+1}" for i in non_empty_rows_list])
 
-            for i, tab in enumerate(tabs):
-                with tab:
+            for tab_idx, row_idx in enumerate(non_empty_rows_list):
+                with tabs[tab_idx]:
                     row_buttons = st.columns(3)
                     with row_buttons[0]:
-                        if st.button(f"Todos Emotes na Row {i+1}", key=f"all_emotes_{i}"):
+                        if st.button(f"Todos Emotes na Row {row_idx+1}", key=f"all_emotes_{row_idx}"):
                             for j in range(grid_cols):
-                                cell_num = i * grid_cols + j + 1
-                                st.session_state[f"status_{cell_num}"] = "Emote"
-                                st.session_state.grid_status[cell_num] = "Emote"
-                            st.rerun() 
+                                cell_num = row_idx * grid_cols + j + 1
+                                if cell_num in st.session_state.non_empty_cells:
+                                    st.session_state[f"status_{cell_num}"] = "Emote"
+                                    st.session_state.grid_status[cell_num] = "Emote"
+                            st.rerun()
 
                     with row_buttons[1]:
-                        if st.button(f"Todos Badges na Row {i+1}", key=f"all_badges_{i}"):
+                        if st.button(f"Todos Badges na Row {row_idx+1}", key=f"all_badges_{row_idx}"):
                             for j in range(grid_cols):
-                                cell_num = i * grid_cols + j + 1
-                                st.session_state[f"status_{cell_num}"] = "Badge"
-                                st.session_state.grid_status[cell_num] = "Badge"
+                                cell_num = row_idx * grid_cols + j + 1
+                                if cell_num in st.session_state.non_empty_cells:
+                                    st.session_state[f"status_{cell_num}"] = "Badge"
+                                    st.session_state.grid_status[cell_num] = "Badge"
                             st.rerun()
 
                     with row_buttons[2]:
-                        if st.button(f"Limpar Row {i+1}", key=f"clear_row_{i}"):
+                        if st.button(f"Limpar Row {row_idx+1}", key=f"clear_row_{row_idx}"):
                             for j in range(grid_cols):
-                                cell_num = i * grid_cols + j + 1
-                                st.session_state[f"status_{cell_num}"] = "None"
-                                st.session_state.grid_status[cell_num] = "None"
+                                cell_num = row_idx * grid_cols + j + 1
+                                if cell_num in st.session_state.non_empty_cells:
+                                    st.session_state[f"status_{cell_num}"] = "None"
+                                    st.session_state.grid_status[cell_num] = "None"
                             st.rerun()
 
-                    cols = st.columns(grid_cols)
-                    for j in range(grid_cols):
-                        cell_num = i * grid_cols + j + 1
+                    # Encontrar células não vazias nesta linha
+                    row_cells = [cell_num for cell_num, (row, _) in st.session_state.non_empty_cells.items() if row == row_idx]
 
-                        with cols[j]:
-                            x = margin + j * (square_size + gap)
-                            y = margin + i * (square_size + gap)
+                    if row_cells:
+                        cols = st.columns(grid_cols)
+                        for j in range(grid_cols):
+                            cell_num = row_idx * grid_cols + j + 1
 
-                            cell = image.crop((x, y, x + square_size, y + square_size))
+                            # Mostrar apenas células não vazias
+                            if cell_num in st.session_state.non_empty_cells:
+                                with cols[j]:
+                                    x = margin + j * (square_size + gap)
+                                    y = margin + row_idx * (square_size + gap)
 
-                            flip_key = f"flip_{cell_num}"
-                            if flip_key in st.session_state and st.session_state[flip_key]:
-                                preview_cell = ImageOps.mirror(cell)
-                            else:
-                                preview_cell = cell
+                                    cell = image.crop((x, y, x + square_size, y + square_size))
 
-                            st.image(preview_cell, width=120, caption=f"Cell #{cell_num}")
+                                    flip_key = f"flip_{cell_num}"
+                                    if flip_key in st.session_state and st.session_state[flip_key]:
+                                        preview_cell = ImageOps.mirror(cell)
+                                    else:
+                                        preview_cell = cell
 
-                            status = st.selectbox(
-                                "Tipo",
-                                ["None", "Emote", "Badge"],
-                                key=f"status_{cell_num}"
-                            )
-                            st.session_state.grid_status[cell_num] = status
+                                    st.image(preview_cell, width=120, caption=f"Cell #{cell_num}")
 
-                            if status != "None":
-                                name = st.text_input(
-                                    "Name",
-                                    key=f"name_{cell_num}"
-                                )
-                                st.session_state.grid_names[cell_num] = name
+                                    status = st.selectbox(
+                                        "Tipo",
+                                        ["None", "Emote", "Badge"],
+                                        key=f"status_{cell_num}"
+                                    )
+                                    st.session_state.grid_status[cell_num] = status
 
-                                flip = st.checkbox(
-                                    "Flip",
-                                    key=f"flip_{cell_num}"
-                                )
-                                st.session_state.grid_flip[cell_num] = flip
+                                    if status != "None":
+                                        name = st.text_input(
+                                            "Name",
+                                            key=f"name_{cell_num}"
+                                        )
+                                        st.session_state.grid_names[cell_num] = name
+
+                                        flip = st.checkbox(
+                                            "Flip",
+                                            key=f"flip_{cell_num}"
+                                        )
+                                        st.session_state.grid_flip[cell_num] = flip
 
         with col2:
             st.subheader("Chat Preview q(≧▽≦q)")
@@ -262,7 +307,7 @@ def main():
                             cell = ImageOps.mirror(cell)
 
                         if status == "Emote":
-                            preview_size = (28, 28) 
+                            preview_size = (28, 28)
                         else:
                             preview_size = (18, 18)
 
@@ -275,7 +320,7 @@ def main():
                         if status == "Badge":
                             st.markdown(f"<img src='data:image/png;base64,{img_str}'> Wanzin__: Te amo!", unsafe_allow_html=True)
                         else:
-                            st.markdown(f"Wanzin__: <img src='data:image/png;base64,{img_str}'>", unsafe_allow_html=True) 
+                            st.markdown(f"Wanzin__: <img src='data:image/png;base64,{img_str}'>", unsafe_allow_html=True)
 
                 st.markdown("**Todos os Emotes:**")
                 emote_html = "Wanzin__: "
@@ -357,37 +402,37 @@ def main():
 
         if flipped_items:
             items_per_row = 5
-            
+
             for i in range(0, len(flipped_items), items_per_row):
                 row_items = flipped_items[i:i+items_per_row]
                 cols = st.columns(10)
-                
+
                 for j, idx in enumerate(row_items):
                     status = st.session_state.grid_status[idx]
-                    
+
                     if idx in st.session_state.grid_names and st.session_state.grid_names[idx]:
                         name = st.session_state.grid_names[idx]
                     else:
                         name = str(idx)
-                    
+
                     row_idx, col_idx = divmod(idx-1, grid_cols)
                     x = margin + col_idx * (square_size + gap)
                     y = margin + row_idx * (square_size + gap)
-                    
+
                     cell = image.crop((x, y, x + square_size, y + square_size))
-                    
+
                     normal = cell
                     flipped = ImageOps.mirror(cell)
-                    
+
                     col_idx = j * 2
                     with cols[col_idx]:
                         st.markdown(f"**{name}**")
                         st.image(normal, width=150)
-                    
+
                     with cols[col_idx + 1]:
                         st.markdown(f"**Flipped**")
                         st.image(flipped, width=150)
-                
+
                 st.markdown("---")
         else:
             st.markdown("Nenhum emote ou badge flipado ainda.")
