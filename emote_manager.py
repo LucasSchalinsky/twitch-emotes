@@ -36,6 +36,8 @@ def main():
         st.session_state.processed = False
     if 'non_empty_cells' not in st.session_state:
         st.session_state.non_empty_cells = {}
+    if 'flare_images' not in st.session_state:
+        st.session_state.flare_images = {}
 
     uploaded_file = st.file_uploader("Imagenzinha da grid mo (❁´◡`❁)", type=["png", "jpg", "jpeg"])
 
@@ -212,7 +214,7 @@ def main():
 
             for tab_idx, row_idx in enumerate(non_empty_rows_list):
                 with tabs[tab_idx]:
-                    row_buttons = st.columns(3)
+                    row_buttons = st.columns(4)
                     with row_buttons[0]:
                         if st.button(f"Todos Emotes na Row {row_idx+1}", key=f"all_emotes_{row_idx}"):
                             for j in range(grid_cols):
@@ -232,6 +234,15 @@ def main():
                             st.rerun()
 
                     with row_buttons[2]:
+                        if st.button(f"Todos Flares na Row {row_idx+1}", key=f"all_flares_{row_idx}"):
+                            for j in range(grid_cols):
+                                cell_num = row_idx * grid_cols + j + 1
+                                if cell_num in st.session_state.non_empty_cells:
+                                    st.session_state[f"status_{cell_num}"] = "Flare"
+                                    st.session_state.grid_status[cell_num] = "Flare"
+                            st.rerun()
+
+                    with row_buttons[3]:
                         if st.button(f"Limpar Row {row_idx+1}", key=f"clear_row_{row_idx}"):
                             for j in range(grid_cols):
                                 cell_num = row_idx * grid_cols + j + 1
@@ -266,7 +277,7 @@ def main():
 
                                     status = st.selectbox(
                                         "Tipo",
-                                        ["None", "Emote", "Badge"],
+                                        ["None", "Emote", "Badge", "Flare"],
                                         key=f"status_{cell_num}"
                                     )
                                     st.session_state.grid_status[cell_num] = status
@@ -357,36 +368,85 @@ def main():
                     st.markdown("Nenhum Emote selecionado.")
 
                 st.markdown("**Todas as Badges:**")
-                badge_html = ""
-                has_badges = False
+
+                badges = []
+                flares = []
 
                 for idx, status in st.session_state.grid_status.items():
                     if status == "Badge":
-                        has_badges = True
                         row_idx, col_idx = divmod(idx-1, grid_cols)
                         x = margin + col_idx * (square_size + gap)
                         y = margin + row_idx * (square_size + gap)
-
-                        if idx in st.session_state.grid_names and st.session_state.grid_names[idx]:
-                            name = st.session_state.grid_names[idx]
-                        else:
-                            name = str(idx)
 
                         cell = image.crop((x, y, x + square_size, y + square_size))
 
                         if idx in st.session_state.grid_flip and st.session_state.grid_flip[idx]:
                             cell = ImageOps.mirror(cell)
 
-                        preview = cell.resize((18, 18))
+                        badges.append(cell)
 
-                        buffered = io.BytesIO()
-                        preview.save(buffered, format="PNG")
-                        img_str = base64.b64encode(buffered.getvalue()).decode()
+                    elif status == "Flare":
+                        row_idx, col_idx = divmod(idx-1, grid_cols)
+                        x = margin + col_idx * (square_size + gap)
+                        y = margin + row_idx * (square_size + gap)
 
-                        badge_html += f"<img src='data:image/png;base64,{img_str}'> "
+                        cell = image.crop((x, y, x + square_size, y + square_size))
 
-                if has_badges:
-                    st.markdown(f"{badge_html} Wanzin__: To Chei de Badge", unsafe_allow_html=True)
+                        if idx in st.session_state.grid_flip and st.session_state.grid_flip[idx]:
+                            cell = ImageOps.mirror(cell)
+
+                        flares.append(cell)
+
+                # Se temos badges e flares, mostrar combinações
+                if badges:
+                    badge_html = ""
+                    has_badges = True
+
+                    # Para cada badge, mostrar a badge normal
+                    for badge in badges:
+                        badge_preview = badge.resize((18, 18))
+
+                        badge_buffer = io.BytesIO()
+                        badge_preview.save(badge_buffer, format="PNG")
+                        badge_img_str = base64.b64encode(badge_buffer.getvalue()).decode()
+
+                        badge_html += f"<img src='data:image/png;base64,{badge_img_str}'> "
+
+                    # Se temos flares, mostrar badges com flares
+                    if flares:
+                        st.markdown("**Badges normais:**", unsafe_allow_html=True)
+                        st.markdown(f"{badge_html} Wanzin__: Badges normais", unsafe_allow_html=True)
+
+                        st.markdown("**Badges com Flares:**", unsafe_allow_html=True)
+
+                        # Para cada flare, combinar com todas as badges
+                        for flare in flares:
+                            flare_badge_html = ""
+
+                            for badge in badges:
+                                # Redimensionar badge e flare para o mesmo tamanho
+                                badge_preview = badge.resize((18, 18))
+                                flare_preview = flare.resize((18, 18))
+
+                                # Criar uma nova imagem com canal alpha
+                                combined = Image.new('RGBA', (18, 18), (0, 0, 0, 0))
+
+                                # Colar a badge primeiro
+                                combined.paste(badge_preview, (0, 0), badge_preview)
+
+                                # Colar o flare por cima
+                                combined.paste(flare_preview, (0, 0), flare_preview)
+
+                                # Converter para base64
+                                combined_buffer = io.BytesIO()
+                                combined.save(combined_buffer, format="PNG")
+                                combined_img_str = base64.b64encode(combined_buffer.getvalue()).decode()
+
+                                flare_badge_html += f"<img src='data:image/png;base64,{combined_img_str}'> "
+
+                            st.markdown(f"{flare_badge_html} Wanzin__: Badges com Flare", unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"{badge_html} Wanzin__: To Chei de Badge", unsafe_allow_html=True)
                 else:
                     st.markdown("Nenhuma Badge selecionada.")
 
@@ -397,7 +457,7 @@ def main():
         for idx in st.session_state.grid_status:
             if (idx in st.session_state.grid_flip and
                 st.session_state.grid_flip[idx] and
-                st.session_state.grid_status[idx] in ["Emote", "Badge"]):
+                st.session_state.grid_status[idx] in ["Emote", "Badge", "Flare"]):
                 flipped_items.append(idx)
 
         if flipped_items:
