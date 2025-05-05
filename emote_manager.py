@@ -36,8 +36,8 @@ def main():
         st.session_state.processed = False
     if 'non_empty_cells' not in st.session_state:
         st.session_state.non_empty_cells = {}
-    if 'flare_images' not in st.session_state:
-        st.session_state.flare_images = {}
+    if 'flair_images' not in st.session_state:
+        st.session_state.flair_images = {}
 
     uploaded_file = st.file_uploader("Imagenzinha da grid mo (❁´◡`❁)", type=["png", "jpg", "jpeg"])
 
@@ -234,7 +234,7 @@ def main():
                             st.rerun()
 
                     with row_buttons[2]:
-                        if st.button(f"Todos Flares na Row {row_idx+1}", key=f"all_flares_{row_idx}"):
+                        if st.button(f"Todos Flares na Row {row_idx+1}", key=f"all_flairs_{row_idx}"):
                             for j in range(grid_cols):
                                 cell_num = row_idx * grid_cols + j + 1
                                 if cell_num in st.session_state.non_empty_cells:
@@ -370,7 +370,7 @@ def main():
                 st.markdown("**Todas as Badges:**")
 
                 badges = []
-                flares = []
+                flairs = []
 
                 for idx, status in st.session_state.grid_status.items():
                     if status == "Badge":
@@ -395,14 +395,11 @@ def main():
                         if idx in st.session_state.grid_flip and st.session_state.grid_flip[idx]:
                             cell = ImageOps.mirror(cell)
 
-                        flares.append(cell)
+                        flairs.append(cell)
 
-                # Se temos badges e flares, mostrar combinações
                 if badges:
                     badge_html = ""
-                    has_badges = True
 
-                    # Para cada badge, mostrar a badge normal
                     for badge in badges:
                         badge_preview = badge.resize((18, 18))
 
@@ -412,39 +409,30 @@ def main():
 
                         badge_html += f"<img src='data:image/png;base64,{badge_img_str}'> "
 
-                    # Se temos flares, mostrar badges com flares
-                    if flares:
+                    if flairs:
                         st.markdown("**Badges normais:**", unsafe_allow_html=True)
                         st.markdown(f"{badge_html} Wanzin__: Badges normais", unsafe_allow_html=True)
 
                         st.markdown("**Badges com Flares:**", unsafe_allow_html=True)
 
-                        # Para cada flare, combinar com todas as badges
-                        for flare in flares:
-                            flare_badge_html = ""
+                        for flair in flairs:
+                            flair_badge_html = ""
 
                             for badge in badges:
-                                # Redimensionar badge e flare para o mesmo tamanho
                                 badge_preview = badge.resize((18, 18))
-                                flare_preview = flare.resize((18, 18))
+                                flair_preview = flair.resize((18, 18))
 
-                                # Criar uma nova imagem com canal alpha
                                 combined = Image.new('RGBA', (18, 18), (0, 0, 0, 0))
-
-                                # Colar a badge primeiro
                                 combined.paste(badge_preview, (0, 0), badge_preview)
+                                combined.paste(flair_preview, (0, 0), flair_preview)
 
-                                # Colar o flare por cima
-                                combined.paste(flare_preview, (0, 0), flare_preview)
-
-                                # Converter para base64
                                 combined_buffer = io.BytesIO()
                                 combined.save(combined_buffer, format="PNG")
                                 combined_img_str = base64.b64encode(combined_buffer.getvalue()).decode()
 
-                                flare_badge_html += f"<img src='data:image/png;base64,{combined_img_str}'> "
+                                flair_badge_html += f"<img src='data:image/png;base64,{combined_img_str}'> "
 
-                            st.markdown(f"{flare_badge_html} Wanzin__: Badges com Flare", unsafe_allow_html=True)
+                            st.markdown(f"{flair_badge_html} Wanzin__: Badges com Flare", unsafe_allow_html=True)
                     else:
                         st.markdown(f"{badge_html} Wanzin__: To Chei de Badge", unsafe_allow_html=True)
                 else:
