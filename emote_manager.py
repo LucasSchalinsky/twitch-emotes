@@ -38,6 +38,56 @@ def main():
         st.session_state.non_empty_cells = {}
     if 'flair_images' not in st.session_state:
         st.session_state.flair_images = {}
+    if 'theme' not in st.session_state:
+        st.session_state.theme = "dark"
+        
+    def toggle_theme():
+        st.session_state.theme = "light" if st.session_state.theme == "dark" else "dark"
+        st.rerun()
+
+    if st.session_state.theme == "dark":
+        bg_color = "#18181b"
+        secondary_bg = "#3d3d3f"
+        text_color = "#ffffff"
+        username_color = "#9147ff"
+    else:
+        bg_color = "#ffffff"
+        secondary_bg = "#f2f2f2"
+        text_color = "#18181b"
+        username_color = "#9147ff"
+
+    st.markdown(f"""
+    <style>
+        .chat-container {{
+            background-color: {bg_color};
+            color: {text_color};
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 20px;
+            font-family: 'Inter', sans-serif;
+        }}
+        .chat-message {{
+            padding: 4px 8px;
+        }}
+        .chat-message:hover {{
+            background-color: {secondary_bg};
+        }}
+        .username {{
+            color: {username_color};
+            font-weight: bold;
+        }}
+        .theme-button {{
+            background-color: #9147ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+        }}
+        .theme-button:hover {{
+            background-color: #772ce8;
+        }}
+    </style>
+    """, unsafe_allow_html=True)
 
     uploaded_file = st.file_uploader("Imagenzinha da grid mo (❁´◡`❁)", type=["png", "jpg", "jpeg"])
 
@@ -234,12 +284,12 @@ def main():
                             st.rerun()
 
                     with row_buttons[2]:
-                        if st.button(f"Todos Flares na Row {row_idx+1}", key=f"all_flairs_{row_idx}"):
+                        if st.button(f"Todos Flairs na Row {row_idx+1}", key=f"all_flairs_{row_idx}"):
                             for j in range(grid_cols):
                                 cell_num = row_idx * grid_cols + j + 1
                                 if cell_num in st.session_state.non_empty_cells:
-                                    st.session_state[f"status_{cell_num}"] = "Flare"
-                                    st.session_state.grid_status[cell_num] = "Flare"
+                                    st.session_state[f"status_{cell_num}"] = "Flair"
+                                    st.session_state.grid_status[cell_num] = "Flair"
                             st.rerun()
 
                     with row_buttons[3]:
@@ -277,7 +327,7 @@ def main():
 
                                     status = st.selectbox(
                                         "Tipo",
-                                        ["None", "Emote", "Badge", "Flare"],
+                                        ["None", "Emote", "Badge", "Flair"],
                                         key=f"status_{cell_num}"
                                     )
                                     st.session_state.grid_status[cell_num] = status
@@ -298,145 +348,182 @@ def main():
         with col2:
             st.subheader("Chat Preview q(≧▽≦q)")
 
-            chat_container = st.container()
+            theme_text = "Mudar para Tema Claro" if st.session_state.theme == "dark" else "Mudar para Tema Escuro"
+            if st.button(theme_text, on_click=toggle_theme, key="theme_toggle_button"):
+                pass
 
-            with chat_container:
-                for idx, status in st.session_state.grid_status.items():
-                    if status != "None":
-                        row_idx, col_idx = divmod(idx-1, grid_cols)
-                        x = margin + col_idx * (square_size + gap)
-                        y = margin + row_idx * (square_size + gap)
+            st.markdown(f"""
+            <style>
+                /* Mensagens individuais */
+                .chat-message {{
+                    background-color: {bg_color} !important;
+                    padding: 4px 8px;
+                    color: {text_color} !important;
+                }}
 
-                        if idx in st.session_state.grid_names and st.session_state.grid_names[idx]:
-                            name = st.session_state.grid_names[idx]
-                        else:
-                            name = str(idx)
+                .chat-message:hover {{
+                    background-color: {secondary_bg} !important;
+                }}
 
-                        cell = image.crop((x, y, x + square_size, y + square_size))
+                .username {{
+                    color: {username_color} !important;
+                    font-weight: bold;
+                }}
 
-                        if idx in st.session_state.grid_flip and st.session_state.grid_flip[idx]:
-                            cell = ImageOps.mirror(cell)
+                /* Garantir que o texto dentro do chat tenha a cor correta */
+                .chat-container p, .chat-container div, .chat-container span {{
+                    color: {text_color} !important;
+                }}
 
-                        if status == "Emote":
-                            preview_size = (28, 28)
-                        else:
-                            preview_size = (18, 18)
+                /* Garantir que os cabeçalhos dentro do chat tenham a cor correta */
+                .chat-container h1, .chat-container h2, .chat-container h3,
+                .chat-container h4, .chat-container h5, .chat-container h6 {{
+                    color: {text_color} !important;
+                }}
+            </style>
+            """, unsafe_allow_html=True)
 
-                        preview = cell.resize(preview_size)
+            for idx, status in st.session_state.grid_status.items():
+                if status != "None":
+                    row_idx, col_idx = divmod(idx-1, grid_cols)
+                    x = margin + col_idx * (square_size + gap)
+                    y = margin + row_idx * (square_size + gap)
 
-                        buffered = io.BytesIO()
-                        preview.save(buffered, format="PNG")
-                        img_str = base64.b64encode(buffered.getvalue()).decode()
-
-                        if status == "Badge":
-                            st.markdown(f"<img src='data:image/png;base64,{img_str}'> Wanzin__: Te amo!", unsafe_allow_html=True)
-                        else:
-                            st.markdown(f"Wanzin__: <img src='data:image/png;base64,{img_str}'>", unsafe_allow_html=True)
-
-                st.markdown("**Todos os Emotes:**")
-                emote_html = "Wanzin__: "
-                has_emotes = False
-
-                for idx, status in st.session_state.grid_status.items():
-                    if status == "Emote":
-                        has_emotes = True
-                        row_idx, col_idx = divmod(idx-1, grid_cols)
-                        x = margin + col_idx * (square_size + gap)
-                        y = margin + row_idx * (square_size + gap)
-
-                        if idx in st.session_state.grid_names and st.session_state.grid_names[idx]:
-                            name = st.session_state.grid_names[idx]
-                        else:
-                            name = str(idx)
-
-                        cell = image.crop((x, y, x + square_size, y + square_size))
-
-                        if idx in st.session_state.grid_flip and st.session_state.grid_flip[idx]:
-                            cell = ImageOps.mirror(cell)
-
-                        preview = cell.resize((28, 28))
-
-                        buffered = io.BytesIO()
-                        preview.save(buffered, format="PNG")
-                        img_str = base64.b64encode(buffered.getvalue()).decode()
-
-                        emote_html += f" <img src='data:image/png;base64,{img_str}'>"
-
-                if has_emotes:
-                    st.markdown(emote_html, unsafe_allow_html=True)
-                else:
-                    st.markdown("Nenhum Emote selecionado.")
-
-                st.markdown("**Todas as Badges:**")
-
-                badges = []
-                flairs = []
-
-                for idx, status in st.session_state.grid_status.items():
-                    if status == "Badge":
-                        row_idx, col_idx = divmod(idx-1, grid_cols)
-                        x = margin + col_idx * (square_size + gap)
-                        y = margin + row_idx * (square_size + gap)
-
-                        cell = image.crop((x, y, x + square_size, y + square_size))
-
-                        if idx in st.session_state.grid_flip and st.session_state.grid_flip[idx]:
-                            cell = ImageOps.mirror(cell)
-
-                        badges.append(cell)
-
-                    elif status == "Flare":
-                        row_idx, col_idx = divmod(idx-1, grid_cols)
-                        x = margin + col_idx * (square_size + gap)
-                        y = margin + row_idx * (square_size + gap)
-
-                        cell = image.crop((x, y, x + square_size, y + square_size))
-
-                        if idx in st.session_state.grid_flip and st.session_state.grid_flip[idx]:
-                            cell = ImageOps.mirror(cell)
-
-                        flairs.append(cell)
-
-                if badges:
-                    badge_html = ""
-
-                    for badge in badges:
-                        badge_preview = badge.resize((18, 18))
-
-                        badge_buffer = io.BytesIO()
-                        badge_preview.save(badge_buffer, format="PNG")
-                        badge_img_str = base64.b64encode(badge_buffer.getvalue()).decode()
-
-                        badge_html += f"<img src='data:image/png;base64,{badge_img_str}'> "
-
-                    if flairs:
-                        st.markdown("**Badges normais:**", unsafe_allow_html=True)
-                        st.markdown(f"{badge_html} Wanzin__: Badges normais", unsafe_allow_html=True)
-
-                        st.markdown("**Badges com Flares:**", unsafe_allow_html=True)
-
-                        for flair in flairs:
-                            flair_badge_html = ""
-
-                            for badge in badges:
-                                badge_preview = badge.resize((18, 18))
-                                flair_preview = flair.resize((18, 18))
-
-                                combined = Image.new('RGBA', (18, 18), (0, 0, 0, 0))
-                                combined.paste(badge_preview, (0, 0), badge_preview)
-                                combined.paste(flair_preview, (0, 0), flair_preview)
-
-                                combined_buffer = io.BytesIO()
-                                combined.save(combined_buffer, format="PNG")
-                                combined_img_str = base64.b64encode(combined_buffer.getvalue()).decode()
-
-                                flair_badge_html += f"<img src='data:image/png;base64,{combined_img_str}'> "
-
-                            st.markdown(f"{flair_badge_html} Wanzin__: Badges com Flare", unsafe_allow_html=True)
+                    if idx in st.session_state.grid_names and st.session_state.grid_names[idx]:
+                        name = st.session_state.grid_names[idx]
                     else:
-                        st.markdown(f"{badge_html} Wanzin__: To Chei de Badge", unsafe_allow_html=True)
+                        name = str(idx)
+
+                    cell = image.crop((x, y, x + square_size, y + square_size))
+
+                    if idx in st.session_state.grid_flip and st.session_state.grid_flip[idx]:
+                        cell = ImageOps.mirror(cell)
+
+                    if status == "Emote":
+                        preview_size = (28, 28)
+                    else:
+                        preview_size = (18, 18)
+
+                    preview = cell.resize(preview_size)
+
+                    buffered = io.BytesIO()
+                    preview.save(buffered, format="PNG")
+                    img_str = base64.b64encode(buffered.getvalue()).decode()
+
+                    if status == "Badge":
+                        st.markdown(f'<div class="chat-message"><img src="data:image/png;base64,{img_str}"> <span class="username">Wanzin__</span>: <span style="color:{text_color}">Te amo!</span></div>', unsafe_allow_html=True)
+                    elif status == "Emote":
+                        st.markdown(f'<div class="chat-message"><span class="username">Wanzin__</span>: <img src="data:image/png;base64,{img_str}"></div>', unsafe_allow_html=True)
+
+            st.markdown(f'<h4>Todos os Emotes:</h4>', unsafe_allow_html=True)
+            emote_html = f'<div class="chat-message"><span class="username">Wanzin__</span>: '
+            has_emotes = False
+
+            for idx, status in st.session_state.grid_status.items():
+                if status == "Emote":
+                    has_emotes = True
+                    row_idx, col_idx = divmod(idx-1, grid_cols)
+                    x = margin + col_idx * (square_size + gap)
+                    y = margin + row_idx * (square_size + gap)
+
+                    if idx in st.session_state.grid_names and st.session_state.grid_names[idx]:
+                        name = st.session_state.grid_names[idx]
+                    else:
+                        name = str(idx)
+
+                    cell = image.crop((x, y, x + square_size, y + square_size))
+
+                    if idx in st.session_state.grid_flip and st.session_state.grid_flip[idx]:
+                        cell = ImageOps.mirror(cell)
+
+                    preview = cell.resize((28, 28))
+
+                    buffered = io.BytesIO()
+                    preview.save(buffered, format="PNG")
+                    img_str = base64.b64encode(buffered.getvalue()).decode()
+
+                    emote_html += f' <img src="data:image/png;base64,{img_str}">'
+
+            emote_html += '</div>'
+
+            if has_emotes:
+                st.markdown(emote_html, unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="chat-message"><span style="color:{text_color}">Nenhum Emote selecionado.</span></div>', unsafe_allow_html=True)
+
+            st.markdown(f'<h4>Todas as Badges:</h4>', unsafe_allow_html=True)
+
+            badges = []
+            flairs = []
+
+            for idx, status in st.session_state.grid_status.items():
+                if status == "Badge":
+                    row_idx, col_idx = divmod(idx-1, grid_cols)
+                    x = margin + col_idx * (square_size + gap)
+                    y = margin + row_idx * (square_size + gap)
+
+                    cell = image.crop((x, y, x + square_size, y + square_size))
+
+                    if idx in st.session_state.grid_flip and st.session_state.grid_flip[idx]:
+                        cell = ImageOps.mirror(cell)
+
+                    badges.append(cell)
+
+                elif status == "Flair":
+                    row_idx, col_idx = divmod(idx-1, grid_cols)
+                    x = margin + col_idx * (square_size + gap)
+                    y = margin + row_idx * (square_size + gap)
+
+                    cell = image.crop((x, y, x + square_size, y + square_size))
+
+                    if idx in st.session_state.grid_flip and st.session_state.grid_flip[idx]:
+                        cell = ImageOps.mirror(cell)
+
+                    flairs.append(cell)
+
+            if badges:
+                badge_html = ""
+
+                for badge in badges:
+                    badge_preview = badge.resize((18, 18))
+
+                    badge_buffer = io.BytesIO()
+                    badge_preview.save(badge_buffer, format="PNG")
+                    badge_img_str = base64.b64encode(badge_buffer.getvalue()).decode()
+
+                    badge_html += f'<img src="data:image/png;base64,{badge_img_str}"> '
+
+                if flairs:
+                    st.markdown(f'<h4>Badges normais:</h4>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="chat-message">{badge_html} <span class="username">Wanzin__</span>: <span style="color:{text_color}">Badges normais</span></div>', unsafe_allow_html=True)
+
+                    st.markdown(f'<h4>Badges com Flairs:</h4>', unsafe_allow_html=True)
+
+                    for flair in flairs:
+                        flair_badge_html = ""
+
+                        for badge in badges:
+                            badge_preview = badge.resize((18, 18))
+                            flair_preview = flair.resize((18, 18))
+
+                            combined = Image.new('RGBA', (18, 18), (0, 0, 0, 0))
+                            combined.paste(badge_preview, (0, 0), badge_preview)
+                            combined.paste(flair_preview, (0, 0), flair_preview)
+
+                            combined_buffer = io.BytesIO()
+                            combined.save(combined_buffer, format="PNG")
+                            combined_img_str = base64.b64encode(combined_buffer.getvalue()).decode()
+
+                            flair_badge_html += f'<img src="data:image/png;base64,{combined_img_str}"> '
+
+                        st.markdown(f'<div class="chat-message">{flair_badge_html} <span class="username">Wanzin__</span>: <span style="color:{text_color}">Badges com Flair</span></div>', unsafe_allow_html=True)
                 else:
-                    st.markdown("Nenhuma Badge selecionada.")
+                    st.markdown(f'<div class="chat-message">{badge_html} <span class="username">Wanzin__</span>: <span style="color:{text_color}">To Chei de Badge</span></div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="chat-message"><span style="color:{text_color}">Nenhuma Badge selecionada.</span></div>', unsafe_allow_html=True)
+
+            # Fechar o container do chat
+            st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown("---")
         st.subheader("Normal vs Flip (￣_,￣ )")
@@ -445,7 +532,7 @@ def main():
         for idx in st.session_state.grid_status:
             if (idx in st.session_state.grid_flip and
                 st.session_state.grid_flip[idx] and
-                st.session_state.grid_status[idx] in ["Emote", "Badge", "Flare"]):
+                st.session_state.grid_status[idx] in ["Emote", "Badge", "Flair"]):
                 flipped_items.append(idx)
 
         if flipped_items:
@@ -474,7 +561,7 @@ def main():
 
                     col_idx = j * 2
                     with cols[col_idx]:
-                        st.markdown(f"**{name}**")
+                        st.markdown(f"**Normal**")
                         st.image(normal, width=150)
 
                     with cols[col_idx + 1]:
