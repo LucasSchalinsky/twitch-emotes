@@ -40,7 +40,7 @@ def main():
         st.session_state.flair_images = {}
     if 'theme' not in st.session_state:
         st.session_state.theme = "dark"
-        
+      
     def toggle_theme():
         st.session_state.theme = "light" if st.session_state.theme == "dark" else "dark"
         st.rerun()
@@ -264,7 +264,7 @@ def main():
 
             for tab_idx, row_idx in enumerate(non_empty_rows_list):
                 with tabs[tab_idx]:
-                    row_buttons = st.columns(4)
+                    row_buttons = st.columns(5)
                     with row_buttons[0]:
                         if st.button(f"Todos Emotes na Row {row_idx+1}", key=f"all_emotes_{row_idx}"):
                             for j in range(grid_cols):
@@ -284,6 +284,15 @@ def main():
                             st.rerun()
 
                     with row_buttons[2]:
+                        if st.button(f"Todos Badge Bits na Row {row_idx+1}", key=f"all_badge_bits_{row_idx}"):
+                            for j in range(grid_cols):
+                                cell_num = row_idx * grid_cols + j + 1
+                                if cell_num in st.session_state.non_empty_cells:
+                                    st.session_state[f"status_{cell_num}"] = "Badge Bit"
+                                    st.session_state.grid_status[cell_num] = "Badge Bit"
+                            st.rerun()
+
+                    with row_buttons[3]:
                         if st.button(f"Todos Flairs na Row {row_idx+1}", key=f"all_flairs_{row_idx}"):
                             for j in range(grid_cols):
                                 cell_num = row_idx * grid_cols + j + 1
@@ -292,7 +301,7 @@ def main():
                                     st.session_state.grid_status[cell_num] = "Flair"
                             st.rerun()
 
-                    with row_buttons[3]:
+                    with row_buttons[4]:
                         if st.button(f"Limpar Row {row_idx+1}", key=f"clear_row_{row_idx}"):
                             for j in range(grid_cols):
                                 cell_num = row_idx * grid_cols + j + 1
@@ -327,7 +336,7 @@ def main():
 
                                     status = st.selectbox(
                                         "Tipo",
-                                        ["None", "Emote", "Badge", "Flair"],
+                                        ["None", "Emote", "Badge", "Badge Bit", "Flair"],
                                         key=f"status_{cell_num}"
                                     )
                                     st.session_state.grid_status[cell_num] = status
@@ -410,7 +419,7 @@ def main():
                     preview.save(buffered, format="PNG")
                     img_str = base64.b64encode(buffered.getvalue()).decode()
 
-                    if status == "Badge":
+                    if status in ["Badge", "Badge Bit"]:
                         st.markdown(f'<div class="chat-message"><img src="data:image/png;base64,{img_str}"> <span class="username">Wanzin__</span>: <span style="color:{text_color}">Te amo!</span></div>', unsafe_allow_html=True)
                     elif status == "Emote":
                         st.markdown(f'<div class="chat-message"><span class="username">Wanzin__</span>: <img src="data:image/png;base64,{img_str}"></div>', unsafe_allow_html=True)
@@ -454,6 +463,7 @@ def main():
             st.markdown(f'<h4>Todas as Badges:</h4>', unsafe_allow_html=True)
 
             badges = []
+            badge_bits = []
             flairs = []
 
             for idx, status in st.session_state.grid_status.items():
@@ -469,6 +479,18 @@ def main():
 
                     badges.append(cell)
 
+                elif status == "Badge Bit":
+                    row_idx, col_idx = divmod(idx-1, grid_cols)
+                    x = margin + col_idx * (square_size + gap)
+                    y = margin + row_idx * (square_size + gap)
+
+                    cell = image.crop((x, y, x + square_size, y + square_size))
+
+                    if idx in st.session_state.grid_flip and st.session_state.grid_flip[idx]:
+                        cell = ImageOps.mirror(cell)
+
+                    badge_bits.append(cell)
+
                 elif status == "Flair":
                     row_idx, col_idx = divmod(idx-1, grid_cols)
                     x = margin + col_idx * (square_size + gap)
@@ -481,22 +503,49 @@ def main():
 
                     flairs.append(cell)
 
-            if badges:
-                badge_html = ""
+            if badges or badge_bits:
+                # Badges normais
+                if badges:
+                    badge_html = ""
+                    for badge in badges:
+                        badge_preview = badge.resize((18, 18))
+                        badge_buffer = io.BytesIO()
+                        badge_preview.save(badge_buffer, format="PNG")
+                        badge_img_str = base64.b64encode(badge_buffer.getvalue()).decode()
+                        badge_html += f'<img src="data:image/png;base64,{badge_img_str}"> '
 
-                for badge in badges:
-                    badge_preview = badge.resize((18, 18))
+                    if flairs or badge_bits:
+                        st.markdown(f'<h4>Badges normais:</h4>', unsafe_allow_html=True)
+                        st.markdown(f'<div class="chat-message">{badge_html} <span class="username">Wanzin__</span>: <span style="color:{text_color}">Badges normais</span></div>', unsafe_allow_html=True)
+                    else:
+                        st.markdown(f'<div class="chat-message">{badge_html} <span class="username">Wanzin__</span>: <span style="color:{text_color}">To Chei de Badge</span></div>', unsafe_allow_html=True)
 
-                    badge_buffer = io.BytesIO()
-                    badge_preview.save(badge_buffer, format="PNG")
-                    badge_img_str = base64.b64encode(badge_buffer.getvalue()).decode()
+                # Badge Bits (Badge na esquerda + Badge Bit na direita)
+                if badge_bits and badges:
+                    st.markdown(f'<h4>Badges com Badge Bits:</h4>', unsafe_allow_html=True)
+                    
+                    for badge_bit in badge_bits:
+                        badge_bit_html = ""
+                        
+                        for badge in badges:
+                            badge_preview = badge.resize((18, 18))
+                            badge_bit_preview = badge_bit.resize((18, 18))
 
-                    badge_html += f'<img src="data:image/png;base64,{badge_img_str}"> '
+                            # Criar imagem combinada: Badge na esquerda, Badge Bit na direita
+                            combined = Image.new('RGBA', (36, 18), (0, 0, 0, 0))
+                            combined.paste(badge_preview, (0, 0), badge_preview)
+                            combined.paste(badge_bit_preview, (18, 0), badge_bit_preview)
 
-                if flairs:
-                    st.markdown(f'<h4>Badges normais:</h4>', unsafe_allow_html=True)
-                    st.markdown(f'<div class="chat-message">{badge_html} <span class="username">Wanzin__</span>: <span style="color:{text_color}">Badges normais</span></div>', unsafe_allow_html=True)
+                            combined_buffer = io.BytesIO()
+                            combined.save(combined_buffer, format="PNG")
+                            combined_img_str = base64.b64encode(combined_buffer.getvalue()).decode()
 
+                            badge_bit_html += f'<img src="data:image/png;base64,{combined_img_str}"> '
+
+                        st.markdown(f'<div class="chat-message">{badge_bit_html} <span class="username">Wanzin__</span>: <span style="color:{text_color}">Badges com Badge Bit</span></div>', unsafe_allow_html=True)
+
+                # Badges com Flairs
+                if flairs and badges:
                     st.markdown(f'<h4>Badges com Flairs:</h4>', unsafe_allow_html=True)
 
                     for flair in flairs:
@@ -517,8 +566,6 @@ def main():
                             flair_badge_html += f'<img src="data:image/png;base64,{combined_img_str}"> '
 
                         st.markdown(f'<div class="chat-message">{flair_badge_html} <span class="username">Wanzin__</span>: <span style="color:{text_color}">Badges com Flair</span></div>', unsafe_allow_html=True)
-                else:
-                    st.markdown(f'<div class="chat-message">{badge_html} <span class="username">Wanzin__</span>: <span style="color:{text_color}">To Chei de Badge</span></div>', unsafe_allow_html=True)
             else:
                 st.markdown(f'<div class="chat-message"><span style="color:{text_color}">Nenhuma Badge selecionada.</span></div>', unsafe_allow_html=True)
 
@@ -532,7 +579,7 @@ def main():
         for idx in st.session_state.grid_status:
             if (idx in st.session_state.grid_flip and
                 st.session_state.grid_flip[idx] and
-                st.session_state.grid_status[idx] in ["Emote", "Badge", "Flair"]):
+                st.session_state.grid_status[idx] in ["Emote", "Badge", "Badge Bit", "Flair"]):
                 flipped_items.append(idx)
 
         if flipped_items:
