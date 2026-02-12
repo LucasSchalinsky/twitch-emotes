@@ -75,7 +75,7 @@ cd twitch-emotes
 pip install -r requirements.txt
 
 # Run the app
-streamlit run app.py
+streamlit run emote_manager.py
 ```
 
 ---
@@ -90,3 +90,18 @@ streamlit run app.py
 ## ❤️ Credits
 Created to support the workflow of
 🎨 [Oceanekorin](https://x.com/oceanekorin) — Digital Twitch Emote Artist
+
+---
+
+## 🖼️ Grid Template
+
+This is the grid format expected by the application.
+
+- 5 rows × 7 columns  
+- 500×500px cells  
+- 150px spacing between cells and margins  
+
+Use this template when exporting emotes from your design software.
+
+![Grid Template](./grid-template.png)
+
